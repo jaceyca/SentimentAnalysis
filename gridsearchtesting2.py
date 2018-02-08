@@ -149,16 +149,16 @@ def main():
 
     fold = KFold(len(trainY), n_folds=5, shuffle=True)
 
-    # gamma_list = [0.1, 0.5, 1, 2, 5, 10]
-    # C_list = [0.01, 0.1, 0.5, 1, 2, 5, 10]
-    gamma_list = [0.1, 1, 10]
-    C_list = [0.01, 1, 100]
+    gamma_list = [0.1, 0.5, 1, 2, 5, 10]
+    C_list = [0.01, 0.1, 0.5, 1, 2, 5, 10]
+    # gamma_list = [0.1, 1, 10]
+    # C_list = [0.01, 1, 100]
     # clfs = []
     parameters = {'C':C_list, 'gamma':gamma_list}
     # lowestError = 1e10
     # bestC = None
     # bestg = None
-    clf = GridSearchCV(SVC(), parameters, cv=fold)
+    clf = GridSearchCV(SVC(), parameters, cv=fold, n_jobs=-1, verbose=2)
     clf.fit(trainX, trainY)
 
     print(clf.best_score_)
@@ -180,10 +180,24 @@ def main():
     #         clfs.append((C, g, error, clf))
 
     # print(lowestError)
-    # bestclf = SVC(C=bestC, gamma=bestgamma)
-    # submission = make_predictions(bestclf, X_train_n, y_train, X_test_n)
-    # save_data(submission, "RBFsubmission.txt")
+    SVclf = SVC(C=bestC, gamma=bestgamma)
+
+    SV = make_predictions(SVclf, trainX, trainY, testX)
+    print("SVC error:", percentError(SV, testY))
+
+    SVCsubmission = make_predictions(SVclf, X_train_n, y_train, X_test_n)
+    save_data(SVCsubmission, "SVCsubmission.txt")
 
 
 if __name__ == '__main__':
     main()
+
+
+'''
+[Parallel(n_jobs=-1)]: Done 210 out of 210 | elapsed: 655.0min finished
+0.849125
+
+{'C': 2, 'gamma': 1}
+
+SVC error: 0.136
+'''

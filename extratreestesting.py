@@ -1,6 +1,7 @@
 import numpy as np
 import pathlib
 from datetime import datetime
+from numba import vectorize, float64
 
 # classifiers
 from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier, ExtraTreesClassifier, RandomForestClassifier
@@ -12,13 +13,14 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.gaussian_process import GaussianProcessClassifier
+from xgboost import XGBClassifier
 
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.cross_validation import KFold
 from sklearn.model_selection import GridSearchCV, ShuffleSplit
 from sklearn.preprocessing import Normalizer
 from sklearn.pipeline import Pipeline
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 def load_data(filename, train=True):
     """
@@ -136,6 +138,8 @@ def percentError(yPred, yTrue):
     '''     
     return 1.0-np.sum(np.equal(yPred, yTrue))/len(yTrue)
 
+# @vectorize(["float64(float64)"], target='gpu')
+
 def main():
     # load the data
     X_train, y_train = load_data("training_data.txt")
@@ -152,7 +156,7 @@ def main():
     parameters = {'criterion':('gini', 'entropy'), 'n_estimators':[10, 100, 1000, 5000],
     'min_samples_split':np.linspace(2, 10, 5).astype(int), 'max_depth':[None, 2, 6, 10]}
     
-    clf = GridSearchCV(ExtraTreesClassifier(), parameters, cv=fold)
+    clf = GridSearchCV(ExtraTreesClassifier(), parameters, cv=fold, n_jobs=-1)
     clf.fit(trainX, trainY)
 
     print(clf.best_score_)

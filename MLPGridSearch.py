@@ -18,7 +18,7 @@ from sklearn.cross_validation import KFold
 from sklearn.model_selection import GridSearchCV, ShuffleSplit
 from sklearn.preprocessing import Normalizer
 from sklearn.pipeline import Pipeline
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 def load_data(filename, train=True):
     """
@@ -149,8 +149,9 @@ def main():
 
     fold = KFold(len(trainY), n_folds=5, shuffle=True)
 
-    parameters = {'activation':('logistic', 'tanh', 'relu'), 'solver':('lbfgs', 'sgd', 'adam'), 
-    'hidden_layer_sizes':[(100,), (300,)], 'learning_rate':('constant', 'invscaling', 'adaptive')}
+    parameters = {'activation':('logistic', 'relu'), 'solver':('sgd', 'adam'), 
+    'hidden_layer_sizes':[(100,), (100, 100), (100, 100, 100)], 'learning_rate':('adaptive'),
+    'alpha':[0.0001, 0.001, 0.01]}
     
     clf = GridSearchCV(MLPClassifier(), parameters, cv=fold, n_jobs=2, verbose=2)
     clf.fit(trainX, trainY)
@@ -159,18 +160,20 @@ def main():
     print()
     print(clf.best_params_)
     print()
-    bestn = clf.best_params_['n_estimators']
-    bestminsamples = clf.best_params_['min_samples_split']
-    bestmaxdepth = clf.best_params_['max_depth']
+    bestactivation = clf.best_params_['activation']
+    bestsolver = clf.best_params_['solver']
+    bestlayersize = clf.best_params_['hidden_layer_sizes']
+    bestrate = clf.best_params_['learning_rate']
+    bestalpha = clf.best_params_['alpha']
 
-    rfclf = MLPClassifier(n_estimators=bestn,
-        min_samples_split=bestminsamples, max_depth=bestmaxdepth)
+    mpclf = MLPClassifier(activation=bestactivation, solver=bestsolver,
+        hidden_layer_sizes=bestlayersize, learning_rate=bestrate, alpha=bestalpha)
     
-    rf = make_predictions(rfclf, trainX, trainY, testX)
-    print("Random forest error:", percentError(rf, testY))
+    mp = make_predictions(mpclf, trainX, trainY, testX)
+    print("MLP error: \n", percentError(mp, testY))
 
-    rfsubmission = make_predictions(rfclf, X_train_n, y_train, X_test_n)
-    save_data(rfsubmission, "anniesRandomforestsubmission.txt")
+    mpsubmission = make_predictions(mpclf, X_train_n, y_train, X_test_n)
+    save_data(mpsubmission, "anniesMLPsubmission.txt")
 
 if __name__ == '__main__':
     main()
