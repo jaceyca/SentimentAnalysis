@@ -1,11 +1,12 @@
 import numpy as np
 import pathlib
 from datetime import datetime
+import sys
+import gc
 
 # classifiers
-from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier, ExtraTreesClassifier, RandomForestClassifier, RandomForestRegressor
+from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier, ExtraTreesClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression, PassiveAggressiveClassifier, RidgeClassifier, SGDClassifier
-from sklearn.linear_model import LogisticRegressionCV, RidgeClassifierCV
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import BernoulliRBM, MLPClassifier
 from sklearn.naive_bayes import GaussianNB
@@ -14,15 +15,10 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.gaussian_process import GaussianProcessClassifier
 
 from sklearn.gaussian_process.kernels import RBF
-from sklearn.model_selection import GridSearchCV, ShuffleSplit
+from sklearn.cross_validation import KFold
+from sklearn.model_selection import ShuffleSplit
 from sklearn.preprocessing import Normalizer
 from sklearn.pipeline import Pipeline
-# import matplotlib.pyplot as plt
-
-
-from sklearn.ensemble import VotingClassifier
-from sklearn.model_selection import cross_val_score
-
 
 def load_data(filename, train=True):
     """
@@ -53,7 +49,6 @@ def load_data(filename, train=True):
         
     return X, y
 
-
 def split_data(x_train, y_train):
     '''
     Function for cross validiation. 
@@ -71,8 +66,7 @@ def split_data(x_train, y_train):
     dataSplit = ShuffleSplit(n_splits = 1, test_size = 0.2)
     for train, test in dataSplit.split(x_train, y_train):
         return x_train[train], y_train[train], x_train[test], y_train[test] 
-
-
+       
 def normalization(X_train, X_test):
     '''
     Function to normalize training and test data
@@ -90,7 +84,6 @@ def normalization(X_train, X_test):
     test_norm = normalizer.transform(X_test)
 
     return (train_norm, test_norm)
-
 
 def make_predictions(clf, X, y, test):
     '''
@@ -111,22 +104,6 @@ def make_predictions(clf, X, y, test):
     
     return predictions
 
-
-def percentError(yPred, yTrue):
-    '''
-    Calculates the percent error between two given label sets
-    
-    Inputs:
-        yPred: predicted labels
-        yTrue: actual labels
-    
-    Outputs:
-        error: float of the number of mismatches divided by total length
-    '''     
-    return 1.0-np.sum(np.equal(yPred, yTrue))/len(yTrue)
-
-
-
 def save_data(data, filename="%s.txt" % datetime.today().strftime("%X").replace(":", "")):
     '''
     Function to save the predictions by the classifier
@@ -145,11 +122,21 @@ def save_data(data, filename="%s.txt" % datetime.today().strftime("%X").replace(
         for Id, prediction in enumerate(data, 1):
             string = str(Id) + ',' + str(prediction) + '\n'
             f.write(string)
-
+        
+def percentError(yPred, yTrue):
+    '''
+    Calculates the percent error between two given label sets
+    
+    Inputs:
+        yPred: predicted labels
+        yTrue: actual labels
+    
+    Outputs:
+        error: float of the number of mismatches divided by total length
+    '''     
+    return 1.0-np.sum(np.equal(yPred, yTrue))/len(yTrue)
 
 def main():
-    # attempt at blending?
-
     # load the data
     X_train, y_train = load_data("training_data.txt")
     X_test, _ = load_data("test_data.txt", False)
@@ -160,39 +147,68 @@ def main():
     # split the data in to training and testing so we can test ourselves
     trainX, trainY, testX, testY = split_data(X_train_n, y_train)
 
-    # PUT THE THINGS WE WANT TO BLEND HERE.
-    logclf = LogisticRegression(C=2.7825594)
-    SVCclf = SVC(gamma=1, C=2, probability = True)
+    # mlpclf = MLPClassifier(activation = 'logistic',
+    #     hidden_layer_sizes=(50, 50, 50), verbose=True)
 
-    # test3 = MLPClassifier(activation = 'logistic', hidden_layer_sizes=(300,))
+    # mlp = make_predictions(mlpclf, trainX, trainY, testX)
+    # print("MLP error:", percentError(mlp, testY))
 
-    # gnbclf = GaussianNB()
+    # mlpsubmission = make_predictions(mlpclf, X_train_n, y_train, X_test_n)
+    # save_data(mlpsubmission, "mlpsubmission.txt")
 
+    gnbclf = GaussianNB()
 
-    etclf = ExtraTreesClassifier(n_estimators=1000, n_jobs=-1)
-    adaclf = AdaBoostClassifier(base_estimator=etclf)
+    gnb = make_predictions(gnbclf, trainX, trainY, testX)
+    print("gnberror:", percentError(gnb, testY))
 
-    # can add weights to this
-    votingclf = VotingClassifier(estimators=[('ada', adaclf),
-        ('svc', SVCclf),
-        # ('mlp', mlpclf),
-        # ('nb', gnbclf),
-        ('log', logclf)
-        ], voting='hard', n_jobs=-1)
-
-    print('Fitting to training data...')
-    voting = make_predictions(votingclf, trainX, trainY, testX)
-    print("Voting error:", percentError(voting, testY))
-
-    print('Fitting to testing data...')
-    votingsubmission = make_predictions(votingclf, X_train_n, y_train, X_test_n)
-    save_data(votingsubmission, "votingsubmission.txt")
-
-    print('All done! \n')
-    # for clf, label in zip([test1, test2, test3, blend], 
-    #                       ['Logistic Regression', 'LogReg', 'MLPClass', 'Ensemble']):
-    #     # scores = cross_val_score(clf, X_train_n, y_train, cv=5, scoring = 'accuracy')
-    #     print("Accuracy: %0.8f (+/- %0.8f) [%s]" % (scores.mean(), scores.std(), label))
+    print("Done \n")
 
 if __name__ == '__main__':
     main()
+
+
+'''
+mlpclf = MLPClassifier(activation = 'logistic', hidden_layer_sizes=(100,),
+    learning_rate='adaptive', alpha=0.01, verbose=True)
+.15700
+
+mlpclf = MLPClassifier(activation = 'logistic', hidden_layer_sizes=(300,), verbose=True)
+.15375
+
+100
+.1425, .151
+
+100, 90
+.16025
+
+50, 50, 50
+.14025, .167, .15875, .153, .1477, 16175, 1555
+.8538 submission
+
+60, 60
+.1494999
+
+60, 60, 60
+.152
+
+40, 40, 40
+.158
+
+relu .18
+
+150
+.14375
+
+alpha=0.001
+.15875
+
+100
+.15875
+
+100, 90
+.154
+
+100, 100, 100
+.153
+
+'''

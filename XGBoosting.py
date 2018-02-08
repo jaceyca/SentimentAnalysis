@@ -1,11 +1,13 @@
 import numpy as np
+import xgboost as xgb
 import pathlib
 from datetime import datetime
+from numba import vectorize, float64
 
 # classifiers
-from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier, ExtraTreesClassifier, RandomForestClassifier, RandomForestRegressor
+from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier, ExtraTreesClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression, PassiveAggressiveClassifier, RidgeClassifier, SGDClassifier
-from sklearn.linear_model import LogisticRegressionCV, RidgeClassifierCV
+from sklearn.linear_model import LogisticRegressionCV
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import BernoulliRBM, MLPClassifier
 from sklearn.naive_bayes import GaussianNB
@@ -14,15 +16,11 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.gaussian_process import GaussianProcessClassifier
 
 from sklearn.gaussian_process.kernels import RBF
+from sklearn.cross_validation import KFold
 from sklearn.model_selection import GridSearchCV, ShuffleSplit
 from sklearn.preprocessing import Normalizer
 from sklearn.pipeline import Pipeline
 # import matplotlib.pyplot as plt
-
-
-from sklearn.ensemble import VotingClassifier
-from sklearn.model_selection import cross_val_score
-
 
 def load_data(filename, train=True):
     """
@@ -53,7 +51,6 @@ def load_data(filename, train=True):
         
     return X, y
 
-
 def split_data(x_train, y_train):
     '''
     Function for cross validiation. 
@@ -71,8 +68,7 @@ def split_data(x_train, y_train):
     dataSplit = ShuffleSplit(n_splits = 1, test_size = 0.2)
     for train, test in dataSplit.split(x_train, y_train):
         return x_train[train], y_train[train], x_train[test], y_train[test] 
-
-
+       
 def normalization(X_train, X_test):
     '''
     Function to normalize training and test data
@@ -90,7 +86,6 @@ def normalization(X_train, X_test):
     test_norm = normalizer.transform(X_test)
 
     return (train_norm, test_norm)
-
 
 def make_predictions(clf, X, y, test):
     '''
@@ -111,22 +106,6 @@ def make_predictions(clf, X, y, test):
     
     return predictions
 
-
-def percentError(yPred, yTrue):
-    '''
-    Calculates the percent error between two given label sets
-    
-    Inputs:
-        yPred: predicted labels
-        yTrue: actual labels
-    
-    Outputs:
-        error: float of the number of mismatches divided by total length
-    '''     
-    return 1.0-np.sum(np.equal(yPred, yTrue))/len(yTrue)
-
-
-
 def save_data(data, filename="%s.txt" % datetime.today().strftime("%X").replace(":", "")):
     '''
     Function to save the predictions by the classifier
@@ -145,11 +124,23 @@ def save_data(data, filename="%s.txt" % datetime.today().strftime("%X").replace(
         for Id, prediction in enumerate(data, 1):
             string = str(Id) + ',' + str(prediction) + '\n'
             f.write(string)
+        
+def percentError(yPred, yTrue):
+    '''
+    Calculates the percent error between two given label sets
+    
+    Inputs:
+        yPred: predicted labels
+        yTrue: actual labels
+    
+    Outputs:
+        error: float of the number of mismatches divided by total length
+    '''     
+    return 1.0-np.sum(np.equal(yPred, yTrue))/len(yTrue)
 
+# @vectorize(["float64(float64)"], target='gpu')
 
 def main():
-    # attempt at blending?
-
     # load the data
     X_train, y_train = load_data("training_data.txt")
     X_test, _ = load_data("test_data.txt", False)
@@ -160,39 +151,42 @@ def main():
     # split the data in to training and testing so we can test ourselves
     trainX, trainY, testX, testY = split_data(X_train_n, y_train)
 
-    # PUT THE THINGS WE WANT TO BLEND HERE.
-    logclf = LogisticRegression(C=2.7825594)
-    SVCclf = SVC(gamma=1, C=2, probability = True)
+    fold = KFold(len(trainY), n_folds=5, shuffle=True)
 
-    # test3 = MLPClassifier(activation = 'logistic', hidden_layer_sizes=(300,))
+    # xgb_model = xgb.XGBClassifier()
 
-    # gnbclf = GaussianNB()
+    parameters = {'max_depth':[3, 6, 10, 15],
+    'learning_rate':[0.1, 0.05, 0.01],
+    'n_estimators':[100, 1000, 5000],
+    'objective':['binary:logistic'],
+    'n_jobs':[-1],
+    'silent':[False],
+    'gamma':[.00001, .0001, .001, .01],
+    'reg_lambda':np.logspace(-2, 2, 5)}
 
+    clf = GridSearchCV(xgb.XGBClassifier(kwargs={'tree_method':'gpu_hist'}), parameters,
+        cv=fold, verbose=2)
+    print("Fitting our model...\n")
+    clf.fit(trainX, trainY)
 
-    etclf = ExtraTreesClassifier(n_estimators=1000, n_jobs=-1)
-    adaclf = AdaBoostClassifier(base_estimator=etclf)
+    print(clf.best_score_)
+    print()
+    print(clf.best_params_)
+    print()
+    bestn = clf.best_params_['n_estimators']
+    bestmaxdepth = clf.best_params_['max_depth']
+    bestrate = clf.best_params_['learning_rate']
+    bestgamma = clf.best_params_['gamma']
+    bestlambda = clf.best_params_['reg_lambda']
 
-    # can add weights to this
-    votingclf = VotingClassifier(estimators=[('ada', adaclf),
-        ('svc', SVCclf),
-        # ('mlp', mlpclf),
-        # ('nb', gnbclf),
-        ('log', logclf)
-        ], voting='hard', n_jobs=-1)
+    xgbclf = xgb.XGBClassifier(n_estimators=bestn, max_depth=bestmaxdepth, learning_rate=bestrate,
+        n_jobs=-1, gamma=bestgamma, reg_lambda=bestlambda)
+    
+    xgbpred = make_predictions(xgbclf, trainX, trainY, testX)
+    print("XGB error:", percentError(xgbpred, testY))
 
-    print('Fitting to training data...')
-    voting = make_predictions(votingclf, trainX, trainY, testX)
-    print("Voting error:", percentError(voting, testY))
-
-    print('Fitting to testing data...')
-    votingsubmission = make_predictions(votingclf, X_train_n, y_train, X_test_n)
-    save_data(votingsubmission, "votingsubmission.txt")
-
-    print('All done! \n')
-    # for clf, label in zip([test1, test2, test3, blend], 
-    #                       ['Logistic Regression', 'LogReg', 'MLPClass', 'Ensemble']):
-    #     # scores = cross_val_score(clf, X_train_n, y_train, cv=5, scoring = 'accuracy')
-    #     print("Accuracy: %0.8f (+/- %0.8f) [%s]" % (scores.mean(), scores.std(), label))
+    xgbsubmission = make_predictions(xgbclf, X_train_n, y_train, X_test_n)
+    save_data(xgbsubmission, "XGBsubmission.txt")
 
 if __name__ == '__main__':
     main()
