@@ -150,7 +150,7 @@ def main():
     fold = KFold(len(trainY), n_folds=5, shuffle=True)
 
     parameters = {'activation':('logistic', 'relu'), 'solver':('sgd', 'adam'), 
-    'hidden_layer_sizes':[(100,), (100, 100), (100, 100, 100)], 'learning_rate':('adaptive'),
+    'hidden_layer_sizes':[(100,), (100, 100), (100, 100, 100)], 'learning_rate':['adaptive'],
     'alpha':[0.0001, 0.001, 0.01]}
     
     clf = GridSearchCV(MLPClassifier(), parameters, cv=fold, n_jobs=2, verbose=2)
