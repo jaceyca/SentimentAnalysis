@@ -149,10 +149,10 @@ def main():
 
     fold = KFold(len(trainY), n_folds=5, shuffle=True)
 
-    parameters = {'criterion':('gini', 'entropy'), 'n_estimators':[10, 100, 1000, 5000],
-    'min_samples_split':np.linspace(2, 10, 5).astype(int), 'max_depth':[None, 2, 6, 10]}
+    parameters = {'activation':('logistic', 'tanh', 'relu'), 'solver':('lbfgs', 'sgd', 'adam'), 
+    'hidden_layer_sizes':[(100,), (300,)], 'learning_rate':('constant', 'invscaling', 'adaptive')}
     
-    clf = GridSearchCV(RandomForestClassifier(), parameters, cv=fold, n_jobs=-1, verbose=2)
+    clf = GridSearchCV(MLPClassifier(), parameters, cv=fold, n_jobs=2, verbose=2)
     clf.fit(trainX, trainY)
 
     print(clf.best_score_)
@@ -163,7 +163,7 @@ def main():
     bestminsamples = clf.best_params_['min_samples_split']
     bestmaxdepth = clf.best_params_['max_depth']
 
-    rfclf = RandomForestClassifier(n_estimators=bestn,
+    rfclf = MLPClassifier(n_estimators=bestn,
         min_samples_split=bestminsamples, max_depth=bestmaxdepth)
     
     rf = make_predictions(rfclf, trainX, trainY, testX)
