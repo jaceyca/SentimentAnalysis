@@ -18,7 +18,7 @@ from sklearn.cross_validation import KFold
 from sklearn.model_selection import GridSearchCV, ShuffleSplit
 from sklearn.preprocessing import Normalizer
 from sklearn.pipeline import Pipeline
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 def load_data(filename, train=True):
     """
@@ -136,6 +136,14 @@ def percentError(yPred, yTrue):
     '''     
     return 1.0-np.sum(np.equal(yPred, yTrue))/len(yTrue)
 
+from keras.models import Sequential
+from keras.layers import Dense, Activation, Dropout
+from keras.layers import Conv2D, MaxPooling2D, Flatten, BatchNormalization
+from keras.layers.advanced_activations import LeakyReLU, PReLU
+from keras import regularizers
+
+from keras.utils import to_categorical
+
 def main():
     # load the data
     X_train, y_train = load_data("training_data.txt")
@@ -147,40 +155,160 @@ def main():
     # split the data in to training and testing so we can test ourselves
     trainX, trainY, testX, testY = split_data(X_train_n, y_train)
 
-    fold = KFold(len(trainY), n_folds=5, shuffle=True)
+    y_binary = to_categorical(y_train)
 
-    parameters = {'criterion':('gini', 'entropy'), 'n_estimators':[10, 100, 1000, 5000],
-    'min_samples_split':np.linspace(2, 10, 5).astype(int), 'max_depth':[None, 2, 6, 10]}
-    
-    clf = GridSearchCV(RandomForestClassifier(), parameters, cv=fold, n_jobs=-1, verbose=2)
-    clf.fit(trainX, trainY)
+    rate = 0.5
+    model = Sequential()
+    model.add(Dense(150, input_shape=(1000,), activation='sigmoid'))
+    # model.add(Activation('sigmoid'))
+    # model.add(BatchNormalization())
+    model.add(Dropout(rate))
 
-    print(clf.best_score_)
-    print()
-    print(clf.best_params_)
-    print()
-    bestn = clf.best_params_['n_estimators']
-    bestminsamples = clf.best_params_['min_samples_split']
-    bestmaxdepth = clf.best_params_['max_depth']
+    model.add(Dense(130, activation='relu',
+        # kernel_regularizer=regularizers.l2(0.001)
+        # activity_regularizer=regularizers.l2(0.005)
+        ))
+    # model.add(LeakyReLU(alpha=.01))
+    # model.add(Dropout(rate))
 
-    rfclf = RandomForestClassifier(n_estimators=bestn,
-        min_samples_split=bestminsamples, max_depth=bestmaxdepth)
-    
-    rf = make_predictions(rfclf, trainX, trainY, testX)
-    print("Random forest error:", percentError(rf, testY))
+    # output layer
+    model.add(Dense(2, activation='softmax'))
 
-    rfsubmission = make_predictions(rfclf, X_train_n, y_train, X_test_n)
-    save_data(rfsubmission, "anniesRandomforestsubmission.txt")
+    ## Printing a summary of the layers and weights in your model
+    model.summary()
+
+    model.compile(loss='binary_crossentropy', optimizer='Adam', metrics=['accuracy'])
+
+    fit = model.fit(X_train_n, y_binary, batch_size=32, epochs=10, verbose=1)
+
+    # testY_binary = to_categorical(testY)
+
+    ## Printing the accuracy of our model, according to the loss function specified in model.compile above
+    # score = model.evaluate(testX, testY_binary, verbose=0)
+    # print('Test score:', score[0])
+    # print('Test accuracy:', score[1])
+
+    seq_binarypredictions = model.predict(X_test_n)
+    seq_predictions = []
+    for i in seq_binarypredictions:
+        if i[0] > i[1]:
+            seq_predictions.append(0)
+        elif i[0] < i[1]:
+            seq_predictions.append(1)
+        else:
+            print(i[0], i[1], "are equal!!!!\n\n")
+    save_data(seq_predictions, "NeuralNetworkSubmission.txt")
 
 if __name__ == '__main__':
     main()
 
 '''
-criterion: entropy, max_depth:None, minsplit:4, n_estimators:1000
-score = .830625
-jessica's random forest error = 0.172
+kernelreg l2=0.001
+160, 160, 3         .852, 0.8297
+160, 160, 10        .85475
+160, 160, 30, 64    .84325
 
-criterion:entropy, max_depth:none, minsplit:4, n_est:5000
-score = .832
-annie's error = 0.177
+kernelreg l2=0.01
+160, 160, 5         .8525, 0.85425
+160, 160, 6         .855, 0.844
+
+kernelreg l1=0.001
+160, 160, 3         0.85325, 0.84075b, 0.8d
+160, 160, 5         0.84375, 0.85025
+160, 160, 10        .8515, 0.854
+160, 160, 15        0.84375
+160, 160, 20        .85075
+
+activityreg l2=0.0001
+160, 160, 15        .84525
+
+d = 0
+150, 4, b           .846, .85125
+150, 6, b           .854, .84975, .8465
+
+200, 8              .847
+200, 10             .84825
+200, 12             .85175
+
+d = 0.3
+150, 4, d            .8565, .8535, .85625
+150, 6, d            .849
+150, 8, d            .852, .83875
+150, 10, d           .8575
+
+dropout = 0.5
+150, 10, d           .85, 853, .84975
+150, 10, d, separate softmax   .84225, .84725
+
+200, 2, no d         .84975, .84575
+200, 3, no d         .8385, .851
+200, 4, no d         .8495, .85225
+
+200, 8, d            .85575, .855, .85, .8585, .84675
+200, 8, no d         .847
+200, 10, d           .847, .8505, .85425
+200, 10, no d        .84825
+200, 10, d, sep      .8525
+200, 12, no d        .85175
+
+130, 130, 10         .8465, .8505
+130, 130, 12         .84625
+130, 130, 15         .862, .851
+
+130, 150, 10         .852, .8465, .84975
+130, 150, 12         .85025, .85475, .8455
+
+150, 130, 8          .854         
+150, 130, 10         .82925, .852, .8425, .85175
+150, 130, 11         .86425, .85325, .85625, .84575, .8435, .84625, .8515, 0.8525, .849
+150, 130, 12         .85425, 0.86275, .8505, 0.85925, .8425, 0.85125
+150, 130, 13         .852, 0.84475
+150, 130, 15         .8455
+
+150, 150, 10, 64     .83825, 0.851
+150, 150, 13, 16     .851, 0.8565
+150, 150, 14, 64     .849, 0.85475
+150, 150, 14, 128    .84925
+150, 150, 30, 16     .85025
+150, 150, 30, 300    .8595, 0.836
+150, 150, 45, 400    .851
+
+150, 150, 8          .862, .85275, .8445, .8495, .847, .847, .8495, .834, .8465, 0.84775
+150, 150, 10         .86025, .84425, .856, .85825, .852
+150, 150, 11         .85175, .841, .85
+150, 150, 12         .85175, .85175, .848
+150, 150, 14         .86425, .8575
+150, 150, 15         .851
+
+150, 200, 10         .84925, .84875
+
+160, 160, 10         .85975, 0.8485, .85325, 0.8445
+160, 160, 12         .84
+
+180, 180, 10         .85125, 0.846
+180, 180, 12         .852, 0.84975
+180, 180, 14         .848
+
+200, 200, 8          .84475, .84725, .845
+200, 200, 10         .85425, .84925, .8595, .8505, .847
+200, 200, 12         .84875, .84675, .85375
+
+more nodes = less epochs
+
+leaky relu
+12 epochs
+100, 100            .8475
+150, 150            .856, .83225, .84825, .841, .848
+200, 200            .85825, .844, .85775, .859, .84925
+300, 300            .84925
+alpha = .03         .851   -reverted
+sigmoid -> leaky    .8375  -rev
+add sigmoid layer   .8535  -rev 
+    delete dropout  .8515, .848
+alpha = .3          .85625
+add batchnorm       .852
+epochs = 8          .85175, .85225, .852, .856, .85225, .85525, .85325
+epochs = 10         .847
+epochs = 9          .84975
+epochs = 11         .849
 '''

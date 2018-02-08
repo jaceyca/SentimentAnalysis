@@ -149,38 +149,55 @@ def main():
 
     fold = KFold(len(trainY), n_folds=5, shuffle=True)
 
-    parameters = {'criterion':('gini', 'entropy'), 'n_estimators':[10, 100, 1000, 5000],
-    'min_samples_split':np.linspace(2, 10, 5).astype(int), 'max_depth':[None, 2, 6, 10]}
-    
-    clf = GridSearchCV(RandomForestClassifier(), parameters, cv=fold, n_jobs=-1, verbose=2)
+    gamma_list = [0.1, 0.5, 1, 2, 5, 10]
+    C_list = [0.01, 0.1, 0.5, 1, 2, 5, 10]
+    # gamma_list = [0.1, 1, 10]
+    # C_list = [0.01, 1, 100]
+    # clfs = []
+    parameters = {'C':C_list, 'gamma':gamma_list}
+    # lowestError = 1e10
+    # bestC = None
+    # bestg = None
+    clf = GridSearchCV(SVC(), parameters, cv=fold, n_jobs=-1, verbose=2)
     clf.fit(trainX, trainY)
 
     print(clf.best_score_)
     print()
     print(clf.best_params_)
     print()
-    bestn = clf.best_params_['n_estimators']
-    bestminsamples = clf.best_params_['min_samples_split']
-    bestmaxdepth = clf.best_params_['max_depth']
+    bestC = clf.best_params_['C']
+    bestgamma = clf.best_params_['gamma']
+    # for C in C_list:
+    #     for g in gamma_list:
+    #         clf = SVC(C=C, gamma=g)
+    #         preds = make_predictions(clf, trainX, trainY, testX)
+    #         error = percentError(preds, testY)
+    #         if error < lowestError:
+    #             lowestError = error
+    #             bestC = C
+    #             bestg = g
+    #         print("SVC error:", C, g, error)
+    #         clfs.append((C, g, error, clf))
 
-    rfclf = RandomForestClassifier(n_estimators=bestn,
-        min_samples_split=bestminsamples, max_depth=bestmaxdepth)
-    
-    rf = make_predictions(rfclf, trainX, trainY, testX)
-    print("Random forest error:", percentError(rf, testY))
+    # print(lowestError)
+    SVclf = SVC(C=bestC, gamma=bestgamma)
 
-    rfsubmission = make_predictions(rfclf, X_train_n, y_train, X_test_n)
-    save_data(rfsubmission, "anniesRandomforestsubmission.txt")
+    SV = make_predictions(SVclf, trainX, trainY, testX)
+    print("SVC error:", percentError(SV, testY))
+
+    SVCsubmission = make_predictions(SVclf, X_train_n, y_train, X_test_n)
+    save_data(SVCsubmission, "SVCsubmission.txt")
+
 
 if __name__ == '__main__':
     main()
 
-'''
-criterion: entropy, max_depth:None, minsplit:4, n_estimators:1000
-score = .830625
-jessica's random forest error = 0.172
 
-criterion:entropy, max_depth:none, minsplit:4, n_est:5000
-score = .832
-annie's error = 0.177
+'''
+[Parallel(n_jobs=-1)]: Done 210 out of 210 | elapsed: 655.0min finished
+0.849125
+
+{'C': 2, 'gamma': 1}
+
+SVC error: 0.136
 '''
