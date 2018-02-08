@@ -159,13 +159,13 @@ def main():
 
     rate = 0.5
     model = Sequential()
-    model.add(Dense(150, input_shape=(1000,), activation='sigmoid'))
+    model.add(Dense(300, input_shape=(1000,), activation='sigmoid'))
     # model.add(Activation('sigmoid'))
     # model.add(BatchNormalization())
     model.add(Dropout(rate))
 
-    model.add(Dense(130, activation='relu',
-        # kernel_regularizer=regularizers.l2(0.001)
+    model.add(Dense(300, activation='relu',
+        kernel_regularizer=regularizers.l2(0.001)
         # activity_regularizer=regularizers.l2(0.005)
         ))
     # model.add(LeakyReLU(alpha=.01))
@@ -179,7 +179,7 @@ def main():
 
     model.compile(loss='binary_crossentropy', optimizer='Adam', metrics=['accuracy'])
 
-    fit = model.fit(X_train_n, y_binary, batch_size=32, epochs=10, verbose=1)
+    fit = model.fit(X_train_n, y_binary, batch_size=32, epochs=50, verbose=1)
 
     # testY_binary = to_categorical(testY)
 
@@ -189,6 +189,8 @@ def main():
     # print('Test accuracy:', score[1])
 
     seq_binarypredictions = model.predict(X_test_n)
+    save_data(seq_binarypredictions, "neuralbinarypreds.txt")
+
     seq_predictions = []
     for i in seq_binarypredictions:
         if i[0] > i[1]:

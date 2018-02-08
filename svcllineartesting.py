@@ -179,7 +179,7 @@ def main():
     #         clfs.append((C, g, error, clf))
 
     # print(lowestError)
-    SVclf = SVC(C=bestC, gamma=bestgamma)
+    SVclf = SVC(C=bestC, gamma=bestgamma, kernel='linear')
 
     SV = make_predictions(SVclf, trainX, trainY, testX)
     print("SVC linear error:", percentError(SV, testY))
@@ -198,5 +198,5 @@ Done  80 out of  80 | elapsed: 95.4min finished
 
 {'C': 2, 'gamma': 0.5, 'kernel': 'linear'}
 
-SVC linear error: 0.14475000000000005
+SVC linear error: 0.15775
 '''

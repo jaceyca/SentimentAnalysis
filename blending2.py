@@ -164,37 +164,49 @@ def main():
     logclf = LogisticRegression(C=2.7825594)
     SVCclf = SVC(gamma=1, C=2, probability = True)
 
-    mlpclf = MLPClassifier(activation = 'logistic', hidden_layer_sizes=(50, 50, 50))
+    # test3 = MLPClassifier(activation = 'logistic', hidden_layer_sizes=(300,))
 
     # gnbclf = GaussianNB()
 
-    etclf = ExtraTreesClassifier(n_estimators=750, n_jobs=-1, verbose=1)
-    adaclf = AdaBoostClassifier(base_estimator=etclf, n_estimators=40)
+
+    etclf = ExtraTreesClassifier(n_estimators=800, n_jobs=-1, verbose=2)
+    adaclf = AdaBoostClassifier(base_estimator=etclf)
 
     # can add weights to this
     votingclf = VotingClassifier(estimators=[('ada', adaclf),
         ('svc', SVCclf),
-        ('mlp', mlpclf),
+        # ('mlp', mlpclf),
         # ('nb', gnbclf),
         ('log', logclf)
-        ], voting='soft', n_jobs=-1)
+        ], voting='hard')
 
     # print('Fitting to training data...')
     # voting = make_predictions(votingclf, trainX, trainY, testX)
     # print("Voting error:", percentError(voting, testY))
-    # 0.13975
+
     print('Fitting to testing data...')
     try:
         votingsubmission = make_predictions(votingclf, X_train_n, y_train, X_test_n)
     except Exception as e:
-        print ("Exception: \n\n", e)
-    save_data(votingsubmission, "votingsubmission.txt")
+        print(e)
+    save_data(votingsubmission, "votingsubmission2.txt")
 
     print('All done! \n')
     # for clf, label in zip([test1, test2, test3, blend], 
     #                       ['Logistic Regression', 'LogReg', 'MLPClass', 'Ensemble']):
     #     # scores = cross_val_score(clf, X_train_n, y_train, cv=5, scoring = 'accuracy')
     #     print("Accuracy: %0.8f (+/- %0.8f) [%s]" % (scores.mean(), scores.std(), label))
+
+    # # seq_predictions, ridgePred, log
+    # # consideration of 3 scores
+    # togPred = []
+    # for index, element in enumerate(seq_predictions):
+    #     if (element + ridgePred[index] + log[index]) > 1:
+    #         togPred.append(1)
+    #     else: 
+    #         togPred.append(0)
+            
+    # # save_data(togPred)
 
 if __name__ == '__main__':
     main()

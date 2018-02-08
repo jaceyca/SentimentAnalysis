@@ -159,17 +159,17 @@ def main():
 
     rate = 0.5
     model = Sequential()
-    model.add(Dense(150, input_shape=(1000,), activation='sigmoid'))
+    model.add(Dense(160, input_shape=(1000,), activation='sigmoid'))
     # model.add(Activation('sigmoid'))
     # model.add(BatchNormalization())
     model.add(Dropout(rate))
 
-    model.add(Dense(130, activation='relu',
-        kernel_regularizer=regularizers.l2(0.002)
+    model.add(Dense(160, activation='relu',
+        kernel_regularizer=regularizers.l2(0.001)
         # activity_regularizer=regularizers.l2(0.005)
         ))
     # model.add(LeakyReLU(alpha=.01))
-    # model.add(Dropout(rate))
+    model.add(Dropout(rate))
 
     # output layer
     model.add(Dense(2, activation='softmax'))
@@ -179,7 +179,7 @@ def main():
 
     model.compile(loss='binary_crossentropy', optimizer='Adam', metrics=['accuracy'])
 
-    fit = model.fit(trainX, y_binary, batch_size=32, epochs=8, verbose=1)
+    fit = model.fit(trainX, y_binary, batch_size=32, epochs=30, verbose=1)
 
     testY_binary = to_categorical(testY)
 
@@ -201,6 +201,17 @@ kernelreg l2=0.001
 160, 160, 30, 64    .84325
 160, 160, 30        0.86225, 0.843nod 
 200, 200, 30        0.84075?, 0.85075?
+
+150, 150, 40        .85175
+160, 160, 30        .85025
+160, 160, 50        .85
+200, 200, 40        .8535
+300, 300, 30        .83775
+300, 300, 40        .8565, .8545, .84275, .85975
+300, 300, 45        .847
+300, 300, 50        .85675, .85175
+500, 500, 30        .852
+500, 500, 50        .84825
 
 l2=0.002            
 150, 130, 11, d=0   .83125
@@ -282,8 +293,10 @@ dropout = 0.5
 140, 120, 10         .8515
 140, 120, 12         .849
 
-150, 130, 8          .854         
+150, 130, 8          .854 
+submission = .8556        
 150, 130, 10         .82925, .852, .8425, .85175, .8465, .865, .85925, .85075
+submission = .8562
 150, 130, 11         .86425, .85325, .85625, .84575, .8435, .84625,
     .8515, 0.8525, .849, .858, .85025, .84575
     .85375, .85125, .84425
@@ -291,6 +304,8 @@ dropout = 0.5
     .854, .85725, .849, .85975, .85275, .855, .85025
 150, 130, 13         .852, 0.84475
 150, 130, 15         .8455
+150, 130, 30         .855
+150, 130, 50         .855
 
 150, 140, 12         .85125, .84275
 
@@ -314,6 +329,9 @@ dropout = 0.5
 150, 150, 15         .851
 
 150, 200, 10         .84925, .84875
+
+160, 140, 10         .8575, .84925, .84975
+160, 140, 11         .84775
 
 160, 150, 15         .85
 
