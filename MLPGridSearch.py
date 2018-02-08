@@ -160,6 +160,7 @@ def main():
     print()
     print(clf.best_params_)
     print()
+    print(clf.best_estimator_)
     bestactivation = clf.best_params_['activation']
     bestsolver = clf.best_params_['solver']
     bestlayersize = clf.best_params_['hidden_layer_sizes']
@@ -174,6 +175,9 @@ def main():
 
     mpsubmission = make_predictions(mpclf, X_train_n, y_train, X_test_n)
     save_data(mpsubmission, "anniesMLPsubmission.txt")
+    print("Successfully saved the data \n")
+    print(clf.cv_results_)
+
 
 if __name__ == '__main__':
     main()
